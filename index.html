@@ -1,1 +1,981 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>FMR-E2E — Market Phases & Activities (Interactive)</title>
+  <style>
+    :root{
+      --bg: #0b0c10;
+      --panel: #11131a;
+      --panel2:#151827;
+      --text: #e9ecf5;
+      --muted:#a9b0c3;
+      --line: rgba(255,255,255,.10);
+      --line2: rgba(255,255,255,.14);
+      --accent:#7aa2ff;
+      --accent2:#8ef0d2;
+      --warn:#ffcc66;
+
+      --radius: 16px;
+      --radius2: 20px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --shadow2: 0 14px 46px rgba(0,0,0,.45);
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg:#f7f8fc;
+        --panel:#ffffff;
+        --panel2:#f3f5fb;
+        --text:#0b1020;
+        --muted:#4b5570;
+        --line: rgba(15,25,45,.10);
+        --line2: rgba(15,25,45,.16);
+        --shadow: 0 12px 30px rgba(15,25,45,.10);
+        --shadow2: 0 18px 50px rgba(15,25,45,.16);
+      }
+    }
+
+    *{ box-sizing: border-box; }
+    html, body{ height: 100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      background: radial-gradient(1200px 600px at 15% -10%, rgba(122,162,255,.18), transparent 60%),
+                  radial-gradient(1200px 600px at 85% 0%, rgba(142,240,210,.12), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+    }
+    a{ color: inherit; }
+    .wrap{ max-width: 1200px; margin: 0 auto; padding: 28px 18px 48px; }
+    header{
+      display:flex; gap:16px; align-items:flex-start; justify-content:space-between;
+      margin-bottom: 18px;
+    }
+    .title{
+      display:flex; flex-direction:column; gap:6px;
+      min-width: 260px;
+    }
+    h1{
+      font-size: clamp(22px, 2.1vw, 30px);
+      margin:0;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+    .sub{
+      margin:0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      max-width: 70ch;
+    }
+
+    .toolbar{
+      display:flex; flex-wrap:wrap; gap:10px;
+      align-items:center; justify-content:flex-end;
+    }
+    .chipRow{
+      display:flex; flex-wrap:wrap; gap:8px;
+      align-items:center;
+    }
+    .chip{
+      border:1px solid var(--line2);
+      background: rgba(255,255,255,.02);
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select:none;
+      transition: transform .06s ease, border-color .2s ease, background .2s ease, color .2s ease;
+      display:inline-flex; gap:8px; align-items:center;
+      white-space:nowrap;
+    }
+    .chip:hover{ transform: translateY(-1px); border-color: rgba(122,162,255,.45); }
+    .chip[aria-pressed="true"]{
+      color: var(--text);
+      background: rgba(122,162,255,.12);
+      border-color: rgba(122,162,255,.65);
+    }
+    .chip .dot{
+      width:8px; height:8px; border-radius:50%;
+      background: var(--line2);
+    }
+    .chip[aria-pressed="true"] .dot{ background: var(--accent); }
+
+    .input{
+      display:flex; align-items:center; gap:10px;
+      border:1px solid var(--line2);
+      background: rgba(255,255,255,.02);
+      border-radius: 999px;
+      padding: 9px 12px;
+      min-width: min(440px, 92vw);
+      box-shadow: var(--shadow);
+    }
+    .input svg{ opacity:.75; }
+    .input input{
+      border:none; outline:none; background: transparent;
+      color: var(--text);
+      width: 100%;
+      font-size: 13px;
+    }
+    .input input::placeholder{ color: color-mix(in oklab, var(--muted) 85%, transparent); }
+
+    .metaRow{
+      display:flex; flex-wrap:wrap; gap:12px;
+      align-items:center;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .pill{
+      border:1px dashed var(--line2);
+      border-radius: 999px;
+      padding: 6px 10px;
+      display:inline-flex; gap:8px; align-items:center;
+    }
+    .pill code{
+      font-family: var(--mono);
+      font-size: 11px;
+      color: color-mix(in oklab, var(--muted) 70%, var(--text));
+    }
+
+    main{ margin-top: 18px; display:flex; flex-direction:column; gap: 18px; }
+
+    .phase{
+      border: 1px solid var(--line);
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 55%), var(--panel);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .phaseHead{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap: 14px;
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, rgba(122,162,255,.10), transparent 36%);
+    }
+    .phaseName{
+      display:flex; flex-direction:column; gap: 6px;
+      min-width: 240px;
+    }
+    .phaseName h2{
+      margin:0;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+      display:flex; gap:10px; align-items:center;
+    }
+    .badge{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 8px;
+      border:1px solid var(--line2);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,.02);
+    }
+    .phaseDesc{
+      margin:0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.45;
+      max-width: 90ch;
+    }
+    .phaseTools{
+      display:flex; gap: 8px; align-items:center; flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .btn{
+      border:1px solid var(--line2);
+      background: rgba(255,255,255,.02);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size: 12px;
+      cursor:pointer;
+      transition: transform .06s ease, border-color .2s ease, background .2s ease;
+      display:inline-flex; gap:8px; align-items:center;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(122,162,255,.45); }
+    .btn:active{ transform: translateY(0); }
+
+    .cards{
+      padding: 14px;
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .card{
+      grid-column: span 6;
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), transparent 60%), var(--panel2);
+      box-shadow: 0 8px 18px rgba(0,0,0,.22);
+      padding: 12px 12px 11px;
+      cursor: pointer;
+      transition: transform .08s ease, border-color .2s ease, background .2s ease;
+      position:relative;
+      overflow:hidden;
+    }
+    .card:hover{ transform: translateY(-2px); border-color: rgba(122,162,255,.45); }
+    .card:focus-visible{
+      outline: 3px solid color-mix(in oklab, var(--accent) 55%, transparent);
+      outline-offset: 2px;
+    }
+    .cardTop{
+      display:flex; align-items:flex-start; justify-content:space-between; gap: 10px;
+      margin-bottom: 8px;
+    }
+    .id{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent2);
+      letter-spacing: .02em;
+    }
+    .name{
+      margin: 4px 0 0;
+      font-size: 14px;
+      letter-spacing:-0.01em;
+      line-height: 1.25;
+    }
+    .def{
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+    .kvs{
+      margin-top: 10px;
+      display:flex; flex-wrap:wrap; gap: 8px;
+    }
+    .kv{
+      border:1px solid var(--line2);
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-size: 11px;
+      color: var(--muted);
+      display:inline-flex; gap:6px; align-items:center;
+      background: rgba(255,255,255,.02);
+    }
+    .kv strong{
+      color: color-mix(in oklab, var(--text) 86%, var(--muted));
+      font-weight: 600;
+    }
+
+    @media (max-width: 900px){
+      .input{ min-width: 100%; }
+      header{ flex-direction:column; align-items:stretch; }
+      .toolbar{ justify-content:flex-start; }
+      .card{ grid-column: span 12; }
+    }
+
+    dialog{
+      border:none;
+      border-radius: 18px;
+      padding:0;
+      max-width: min(860px, 96vw);
+      width: 100%;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: var(--shadow2);
+    }
+    dialog::backdrop{
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(4px);
+    }
+    .modal{
+      display:flex; flex-direction:column;
+      border:1px solid var(--line);
+      border-radius: 18px;
+      overflow:hidden;
+    }
+    .modalHead{
+      padding: 14px 14px 12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(90deg, rgba(122,162,255,.14), transparent 42%);
+      display:flex; justify-content:space-between; gap:12px; align-items:flex-start;
+    }
+    .modalTitle{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .modalTitle .row{
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    }
+    .modalTitle h3{
+      margin:0;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+    .modalBody{
+      padding: 14px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .panel{
+      border:1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.02);
+      padding: 12px;
+    }
+    .panel h4{
+      margin:0 0 8px;
+      font-size: 12px;
+      color: color-mix(in oklab, var(--muted) 78%, var(--text));
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .panel p{
+      margin:0;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+    .list{
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .list li{ margin: 6px 0; color: color-mix(in oklab, var(--text) 90%, var(--muted)); }
+    .muted{ color: var(--muted); }
+    .modalFoot{
+      padding: 12px 14px;
+      border-top:1px solid var(--line);
+      display:flex; justify-content:space-between; gap:10px; align-items:center;
+      flex-wrap:wrap;
+      background: rgba(255,255,255,.02);
+    }
+    .small{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.65);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-size: 12px;
+      opacity: 0;
+      pointer-events:none;
+      transition: opacity .2s ease, transform .2s ease;
+      backdrop-filter: blur(6px);
+    }
+    .toast.show{
+      opacity: 1;
+      transform: translateX(-50%) translateY(-2px);
+    }
+    @media (prefers-color-scheme: light){
+      .toast{ background: rgba(15,25,45,.88); }
+    }
+
+    .srOnly{
+      position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+      overflow:hidden; clip: rect(0,0,0,0); white-space:nowrap; border:0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>FMR-E2E — Market Phases & Market Activities</h1>
+        <p class="sub">
+          Interactive view of the common end-to-end building blocks (Market Activities) grouped by Market Phase, with definitions and indicative Data Object inputs/outputs.
+        </p>
+        <div class="metaRow" id="metaRow"></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="input" role="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M10 18a8 8 0 1 1 5.29-14.06A8 8 0 0 1 10 18Zm11 3.59-5.31-5.31a10 10 0 1 0-1.41 1.41L19.59 23 21 21.59Z"/>
+          </svg>
+          <label class="srOnly" for="q">Search activities</label>
+          <input id="q" autocomplete="off" placeholder="Search (e.g. “baseline”, “dispatch”, “qualify”, “invoice”)" />
+        </div>
+
+        <div class="chipRow" id="phaseChips" aria-label="Filter by Market Phase"></div>
+      </div>
+    </header>
+
+    <main id="root" aria-live="polite"></main>
+
+    <dialog id="dlg">
+      <div class="modal">
+        <div class="modalHead">
+          <div class="modalTitle">
+            <div class="row">
+              <span class="id" id="dlgId"></span>
+              <span class="badge" id="dlgPhase"></span>
+            </div>
+            <h3 id="dlgName"></h3>
+          </div>
+          <button class="btn" id="dlgClose" type="button" aria-label="Close details">
+            <span aria-hidden="true">✕</span> Close
+          </button>
+        </div>
+        <div class="modalBody">
+          <section class="panel">
+            <h4>Definition</h4>
+            <p id="dlgDef"></p>
+          </section>
+          <section class="panel">
+            <h4>Deep link</h4>
+            <p class="muted">
+              Share or bookmark:
+              <br />
+              <code id="dlgLink" style="font-family:var(--mono); font-size:12px;"></code>
+            </p>
+            <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn" id="dlgCopy" type="button">Copy link</button>
+              <button class="btn" id="dlgCopyJson" type="button">Copy JSON</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h4>Indicative Data Object inputs</h4>
+            <ul class="list" id="dlgInputs"></ul>
+            <p class="small muted" id="dlgInputsEmpty" style="display:none;">No indicative inputs listed.</p>
+          </section>
+          <section class="panel">
+            <h4>Indicative Data Object outputs</h4>
+            <ul class="list" id="dlgOutputs"></ul>
+            <p class="small muted" id="dlgOutputsEmpty" style="display:none;">No indicative outputs listed.</p>
+          </section>
+        </div>
+
+        <div class="modalFoot">
+          <div class="small">
+            Data source: FMR-E2E v1.0 (published 12 Dec 2025) — Market Phases, Market Activities, and indicative Data Objects.
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" id="dlgPrev" type="button">Previous</button>
+            <button class="btn" id="dlgNext" type="button">Next</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    // -----------------------------
+    // Canonical dataset (edit here)
+    // -----------------------------
+    const DATA = {
+      doc: {
+        code: "FMR-E2E",
+        title: "End to End process",
+        version: "1.0",
+        publishedDate: "2025-12-12",
+        effectiveFrom: "2026-04-01"
+      },
+      phases: [
+        {
+          key: "Exploration",
+          badge: "L1 Phase",
+          description: "The preliminary first market phase, containing activities to understand market opportunities, assess potential participation, and form an initial strategy for flexibility provision."
+        },
+        {
+          key: "Qualification",
+          badge: "L1 Phase",
+          description: "Steps required for a participant and their assets and/or units to become eligible to offer services in a grid-safe manner, in a Sub-Market."
+        },
+        {
+          key: "Competition",
+          badge: "L1 Phase",
+          description: "Market-facing activities where buy/sell requirements are communicated, prices are formed and transactions are cleared, either continuously or via auctions."
+        },
+        {
+          key: "Scheduling and Dispatch",
+          badge: "L1 Phase",
+          description: "Processes to maintain operational readiness, provide visibility, and deliver contracted services in real time."
+        },
+        {
+          key: "Verification",
+          badge: "L1 Phase",
+          description: "Collection, processing, and communication of performance data to confirm service delivery."
+        },
+        {
+          key: "Settlement",
+          badge: "L1 Phase",
+          description: "Financial processes to generate invoices and execute payments based on verified service delivery."
+        }
+      ],
+      activities: [
+        // Exploration (E.*)
+        { id:"E.1", name:"Define Sub-Market", phase:"Exploration",
+          definition:"Identify and describe the scope, operator, and objectives of the Sub-Market.",
+          inputs:["Market operator mandate","Geographical constraints","Regulatory framework"],
+          outputs:["Sub-Market definition record"]
+        },
+        { id:"E.2", name:"Understand Flexibility Markets", phase:"Exploration",
+          definition:"Gather and analyse market design, rules, and price signals.",
+          inputs:["BSC rules","Market rules","Procurement schedules","Historical prices"],
+          outputs:["Market analysis report object"]
+        },
+        { id:"E.3", name:"Build Investment Case", phase:"Exploration",
+          definition:"Assess costs, revenues, and risks to justify participation.",
+          inputs:["Cost data","Forecast price signals","Asset capability data"],
+          outputs:["Business case object"]
+        },
+        { id:"E.4", name:"Develop Operational Strategy", phase:"Exploration",
+          definition:"Identify operational needs, formulate internal processes and readiness plans.",
+          inputs:["Business case","Operational capability plan"],
+          outputs:["Operational strategy document"]
+        },
+
+        // Qualification (Q.*)
+        { id:"Q.1", name:"Register Counterparty", phase:"Qualification",
+          definition:"Submit entity information to become a recognised participant with a BSC role.",
+          inputs:["Counterparty details"],
+          outputs:["Counterparty registration confirmation"]
+        },
+        { id:"Q.2", name:"Qualify Counterparty (Commercially)", phase:"Qualification",
+          definition:"Satisfy credit, corporate compliance, and insurance requirements.",
+          inputs:["Credit rating","Proof of insurance","Financial statements"],
+          outputs:["Counterparty qualification confirmation"]
+        },
+        { id:"Q.3", name:"Register Product", phase:"Qualification",
+          definition:"Published product technical and procurement requirements.",
+          inputs:["Product requirements document(s)"],
+          outputs:["Product specification"]
+        },
+        { id:"Q.4", name:"Sign Service Contract", phase:"Qualification",
+          definition:"Execute binding agreements with the system operator.",
+          inputs:["Contract terms","Signature authority"],
+          outputs:["Executed service contract"]
+        },
+        { id:"Q.5", name:"Register Assets", phase:"Qualification",
+          definition:"Provide detailed information about physical assets. Note this is about registering at ‘point of market entry’ and is different to notification of installed assets.",
+          inputs:["Asset technical details","Connection agreement"],
+          outputs:["Asset registration record"]
+        },
+        { id:"Q.6", name:"Pre-Qualify Assets", phase:"Qualification",
+          definition:"Verify assets meet preliminary technical requirements.",
+          inputs:["Asset data validation results"],
+          outputs:["Asset pre-qualification record"]
+        },
+        { id:"Q.7", name:"Register Units", phase:"Qualification",
+          definition:"Define market units for bidding.",
+          inputs:["Asset-to-unit mapping","Accounting point IDs","Capacity data"],
+          outputs:["Unit registration record"]
+        },
+        { id:"Q.8", name:"Pre-Qualify Units", phase:"Qualification",
+          definition:"Verify unit meets preliminary operational requirements.",
+          inputs:["Unit-to-product mapping","Unit data validation results"],
+          outputs:["Unit pre-qualification record"]
+        },
+        { id:"Q.9", name:"Pre-Qualify Grid", phase:"Qualification",
+          definition:"Verify relevant network segment can handle a unit providing the product (system readiness).",
+          inputs:["Product-to-grid mapping","Grid technical data"],
+          outputs:["Grid pre-qualification record"]
+        },
+        { id:"Q.10", name:"Test Units", phase:"Qualification",
+          definition:"Conduct operational trials to confirm readiness. Can be ex-ante or ex-post actual service delivery.",
+          inputs:["Dispatch test instructions","Telemetry"],
+          outputs:["Unit test report"]
+        },
+        { id:"Q.11", name:"Register Baseline", phase:"Qualification",
+          definition:"Submit reference consumption/generation profile for performance assessment.",
+          inputs:["Baseline methodology statement"],
+          outputs:["Approved baseline reference"]
+        },
+
+        // Competition (C.*)
+        { id:"C.1", name:"Communicate Buy Requirements", phase:"Competition",
+          definition:"Publish product buy order reflecting operational need for flexibility services.",
+          inputs:["System need forecast","Procurement terms"],
+          outputs:["Buy requirement publication"]
+        },
+        { id:"C.2", name:"Communicate Sell Requirements", phase:"Competition",
+          definition:"Submit offers or availability declarations.",
+          inputs:["Availability declarations","Bid prices"],
+          outputs:["Offer submission record"]
+        },
+        { id:"C.3", name:"Clear Market", phase:"Competition",
+          definition:"Match buy and sell orders, determine clearing prices.",
+          inputs:["All valid bids/offers","Buy requirements"],
+          outputs:["Market clearing report"]
+        },
+
+        // Scheduling & Dispatch (D.*)
+        { id:"D.1", name:"Maintain Unit Availability", phase:"Scheduling and Dispatch",
+          definition:"Ensure units remain operationally ready.",
+          inputs:["Maintenance schedules","Operational status reports"],
+          outputs:["Updated availability status"]
+        },
+        { id:"D.2", name:"Provide Operational Visibility", phase:"Scheduling and Dispatch",
+          definition:"Share availability and/or metering data with SOs.",
+          inputs:["Unit telemetry","Constraint data"],
+          outputs:["Operational visibility report"]
+        },
+        { id:"D.3", name:"Dispatch Units", phase:"Scheduling and Dispatch",
+          definition:"Issue instructions to market units.",
+          inputs:["Market clearing results","Unit availability"],
+          outputs:["Dispatch instruction object"]
+        },
+        { id:"D.4", name:"Dispatch Assets", phase:"Scheduling and Dispatch",
+          definition:"Send operational commands to physical assets.",
+          inputs:["Unit dispatch instruction","Asset mapping"],
+          outputs:["Asset-level operational command(s)"]
+        },
+        { id:"D.5", name:"Cease Units", phase:"Scheduling and Dispatch",
+          definition:"Terminate scheduled operation of units.",
+          inputs:["Dispatch termination signal"],
+          outputs:["Unit stop confirmation"]
+        },
+        { id:"D.6", name:"Cease Assets", phase:"Scheduling and Dispatch",
+          definition:"Stop service delivery from physical assets.",
+          inputs:["Asset stop command(s)"],
+          outputs:["Asset stop confirmation"]
+        },
+
+        // Verification (V.*)
+        { id:"V.1", name:"Collate Verification Data", phase:"Verification",
+          definition:"Gather metering and operational data.",
+          inputs:["Metering data","Dispatch logs"],
+          outputs:["Verification dataset"]
+        },
+        { id:"V.2", name:"Process Verification Data", phase:"Verification",
+          definition:"Analyse data to assess compliance with obligations.",
+          inputs:["Verification dataset","Baseline reference"],
+          outputs:["Performance assessment record"]
+        },
+        { id:"V.3", name:"Communicate Performance", phase:"Verification",
+          definition:"Report performance outcomes to market participants.",
+          inputs:["Performance assessment record"],
+          outputs:["Performance report"]
+        },
+        { id:"V.4", name:"Communicate Penalties", phase:"Verification",
+          definition:"Report penalty outcomes to market participants.",
+          inputs:["Penalty assessment record"],
+          outputs:["Penalty notice"]
+        },
+        { id:"V.5", name:"Manage Disputes", phase:"Verification",
+          definition:"Resolve disagreements over verification outcomes.",
+          inputs:["Dispute submission","Evidence documents"],
+          outputs:["Dispute resolution record"]
+        },
+        { id:"V.6", name:"Report on Service Delivery", phase:"Verification",
+          definition:"Produce regulatory or contractual reports for settlement.",
+          inputs:["Performance report","Regulatory templates"],
+          outputs:["Service delivery report"]
+        },
+
+        // Settlement (S.*)
+        { id:"S.1", name:"Generate Invoices", phase:"Settlement",
+          definition:"Prepare invoices based on verified delivery.",
+          inputs:["Verified performance data","Contract price terms"],
+          outputs:["Invoice object"]
+        },
+        { id:"S.2", name:"Process Payments", phase:"Settlement",
+          definition:"Transfer funds to service providers.",
+          inputs:["Approved invoice","Payment details"],
+          outputs:["Payment confirmation"]
+        }
+      ]
+    };
+
+    // -----------------------------
+    // UI state
+    // -----------------------------
+    const state = {
+      q: "",
+      phaseFilter: "All",
+      // ordering: stable by phase then numeric suffix
+    };
+
+    const $ = (sel) => document.querySelector(sel);
+    const root = $("#root");
+    const q = $("#q");
+    const chips = $("#phaseChips");
+    const metaRow = $("#metaRow");
+
+    const dlg = $("#dlg");
+    const dlgId = $("#dlgId");
+    const dlgName = $("#dlgName");
+    const dlgPhase = $("#dlgPhase");
+    const dlgDef = $("#dlgDef");
+    const dlgInputs = $("#dlgInputs");
+    const dlgOutputs = $("#dlgOutputs");
+    const dlgInputsEmpty = $("#dlgInputsEmpty");
+    const dlgOutputsEmpty = $("#dlgOutputsEmpty");
+    const dlgLink = $("#dlgLink");
+    const toast = $("#toast");
+
+    const closeBtn = $("#dlgClose");
+    const copyBtn = $("#dlgCopy");
+    const copyJsonBtn = $("#dlgCopyJson");
+    const prevBtn = $("#dlgPrev");
+    const nextBtn = $("#dlgNext");
+
+    function showToast(msg){
+      toast.textContent = msg;
+      toast.classList.add("show");
+      window.clearTimeout(showToast._t);
+      showToast._t = window.setTimeout(()=>toast.classList.remove("show"), 1400);
+    }
+
+    function byIdSort(a,b){
+      const [ap, an] = a.id.split(".");
+      const [bp, bn] = b.id.split(".");
+      if (ap !== bp) return ap.localeCompare(bp);
+      return (Number(an) || 0) - (Number(bn) || 0);
+    }
+
+    function setHash(id){
+      history.replaceState(null, "", `#${encodeURIComponent(id)}`);
+    }
+
+    function getHashId(){
+      const raw = (location.hash || "").replace(/^#/, "");
+      try { return decodeURIComponent(raw); } catch { return raw; }
+    }
+
+    function buildMeta(){
+      const { doc } = DATA;
+      const total = DATA.activities.length;
+      metaRow.innerHTML = `
+        <span class="pill"><strong>Document</strong>&nbsp;<code>${doc.code} v${doc.version}</code></span>
+        <span class="pill"><strong>Published</strong>&nbsp;<code>${doc.publishedDate}</code></span>
+        <span class="pill"><strong>Effective from</strong>&nbsp;<code>${doc.effectiveFrom}</code></span>
+        <span class="pill"><strong>Activities</strong>&nbsp;<code>${total}</code></span>
+      `;
+    }
+
+    function buildChips(){
+      const phaseKeys = ["All", ...DATA.phases.map(p => p.key)];
+      chips.innerHTML = "";
+      for (const key of phaseKeys){
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chip";
+        btn.setAttribute("aria-pressed", key === state.phaseFilter ? "true" : "false");
+        btn.innerHTML = `<span class="dot"></span>${key}`;
+        btn.addEventListener("click", () => {
+          state.phaseFilter = key;
+          buildChips();
+          render();
+        });
+        chips.appendChild(btn);
+      }
+    }
+
+    function filterActivities(acts){
+      const term = state.q.trim().toLowerCase();
+      return acts.filter(a => {
+        if (state.phaseFilter !== "All" && a.phase !== state.phaseFilter) return false;
+        if (!term) return true;
+        const hay = [
+          a.id, a.name, a.phase, a.definition,
+          ...(a.inputs||[]), ...(a.outputs||[])
+        ].join(" ").toLowerCase();
+        return hay.includes(term);
+      });
+    }
+
+    function render(){
+      const filtered = filterActivities([...DATA.activities]).sort(byIdSort);
+
+      // group by phase
+      const byPhase = new Map(DATA.phases.map(p => [p.key, []]));
+      for (const a of filtered){
+        if (!byPhase.has(a.phase)) byPhase.set(a.phase, []);
+        byPhase.get(a.phase).push(a);
+      }
+
+      root.innerHTML = "";
+
+      for (const phase of DATA.phases){
+        const list = byPhase.get(phase.key) || [];
+        if (state.phaseFilter !== "All" && phase.key !== state.phaseFilter) continue;
+        if (state.q && list.length === 0) continue;
+
+        const section = document.createElement("section");
+        section.className = "phase";
+        section.id = `phase-${phase.key.replaceAll(" ", "-")}`;
+
+        section.innerHTML = `
+          <div class="phaseHead">
+            <div class="phaseName">
+              <h2>${phase.key} <span class="badge">${list.length} activities</span></h2>
+              <p class="phaseDesc">${phase.description}</p>
+            </div>
+            <div class="phaseTools">
+              <button class="btn" type="button" data-scroll-top="true">Back to top</button>
+            </div>
+          </div>
+          <div class="cards"></div>
+        `;
+
+        const cards = section.querySelector(".cards");
+        section.querySelector('[data-scroll-top="true"]').addEventListener("click", () => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        for (const a of list){
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "card";
+          card.setAttribute("data-id", a.id);
+          card.innerHTML = `
+            <div class="cardTop">
+              <div>
+                <div class="id">${a.id}</div>
+                <div class="name">${a.name}</div>
+              </div>
+              <span class="badge">${a.phase}</span>
+            </div>
+            <div class="def">${a.definition}</div>
+            <div class="kvs">
+              <span class="kv"><strong>Inputs</strong> ${(a.inputs||[]).length}</span>
+              <span class="kv"><strong>Outputs</strong> ${(a.outputs||[]).length}</span>
+            </div>
+          `;
+          card.addEventListener("click", () => openActivity(a.id));
+          cards.appendChild(card);
+        }
+
+        root.appendChild(section);
+      }
+
+      // empty state
+      if (!root.children.length){
+        const empty = document.createElement("section");
+        empty.className = "phase";
+        empty.innerHTML = `
+          <div class="phaseHead">
+            <div class="phaseName">
+              <h2>No results <span class="badge">0 activities</span></h2>
+              <p class="phaseDesc">Try a broader search term or clear the phase filter.</p>
+            </div>
+          </div>
+        `;
+        root.appendChild(empty);
+      }
+    }
+
+    function activityIndexInFiltered(id){
+      const filtered = filterActivities([...DATA.activities]).sort(byIdSort);
+      const idx = filtered.findIndex(a => a.id === id);
+      return { filtered, idx };
+    }
+
+    function openActivity(id){
+      const act = DATA.activities.find(a => a.id === id);
+      if (!act) return;
+
+      dlgId.textContent = act.id;
+      dlgName.textContent = act.name;
+      dlgPhase.textContent = act.phase;
+      dlgDef.textContent = act.definition;
+
+      // lists
+      dlgInputs.innerHTML = "";
+      dlgOutputs.innerHTML = "";
+      const ins = act.inputs || [];
+      const outs = act.outputs || [];
+
+      dlgInputsEmpty.style.display = ins.length ? "none" : "block";
+      dlgOutputsEmpty.style.display = outs.length ? "none" : "block";
+
+      for (const v of ins){
+        const li = document.createElement("li");
+        li.textContent = v;
+        dlgInputs.appendChild(li);
+      }
+      for (const v of outs){
+        const li = document.createElement("li");
+        li.textContent = v;
+        dlgOutputs.appendChild(li);
+      }
+
+      const url = `${location.origin}${location.pathname}#${encodeURIComponent(act.id)}`;
+      dlgLink.textContent = url;
+
+      // wire prev/next based on current filters/search for predictable navigation
+      const { filtered, idx } = activityIndexInFiltered(act.id);
+      prevBtn.disabled = idx <= 0;
+      nextBtn.disabled = idx < 0 || idx >= filtered.length - 1;
+
+      prevBtn.onclick = () => { if (idx > 0) openActivity(filtered[idx - 1].id); };
+      nextBtn.onclick = () => { if (idx >= 0 && idx < filtered.length - 1) openActivity(filtered[idx + 1].id); };
+
+      copyBtn.onclick = async () => {
+        try { await navigator.clipboard.writeText(url); showToast("Link copied"); }
+        catch { showToast("Copy failed (browser permissions)"); }
+      };
+
+      copyJsonBtn.onclick = async () => {
+        const payload = JSON.stringify(act, null, 2);
+        try { await navigator.clipboard.writeText(payload); showToast("JSON copied"); }
+        catch { showToast("Copy failed (browser permissions)"); }
+      };
+
+      setHash(act.id);
+      if (!dlg.open) dlg.showModal();
+    }
+
+    function closeDialog(){
+      if (dlg.open) dlg.close();
+    }
+
+    // -----------------------------
+    // Events
+    // -----------------------------
+    q.addEventListener("input", () => {
+      state.q = q.value;
+      render();
+      // If user is searching, keep the hash stable (do not clear) to avoid surprising behaviour.
+    });
+
+    closeBtn.addEventListener("click", closeDialog);
+    dlg.addEventListener("click", (e) => {
+      // click outside content closes
+      const rect = dlg.getBoundingClientRect();
+      const inDialog = (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom);
+      if (!inDialog) closeDialog();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (!dlg.open) return;
+      if (e.key === "Escape") closeDialog();
+      // lightweight keyboard nav
+      if (e.key === "ArrowLeft" && !prevBtn.disabled) prevBtn.click();
+      if (e.key === "ArrowRight" && !nextBtn.disabled) nextBtn.click();
+    });
+
+    window.addEventListener("hashchange", () => {
+      const id = getHashId();
+      if (id) openActivity(id);
+    });
+
+    // -----------------------------
+    // Init
+    // -----------------------------
+    buildMeta();
+    buildChips();
+    render();
+
+    // Auto-open deep link
+    const initial = getHashId();
+    if (initial) openActivity(initial);
+  </script>
+</body>
+</html>
 
